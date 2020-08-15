@@ -20,7 +20,7 @@ from statsmodels.tsa.seasonal import seasonal_decompose
 from statsmodels.tsa.arima_model import ARIMA
 from pandas.plotting import register_matplotlib_converters
 register_matplotlib_converters()
-
+# test for upload to git
 app = Flask(__name__)
 
 conn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};'
