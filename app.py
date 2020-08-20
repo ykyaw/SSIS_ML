@@ -99,8 +99,8 @@ def arima(ProductId):
     if ProductId != 0:
         df = df[df.ProductId == ProductId]
     # For example
-    ProductId = 'C001'
-    df = df[df.ProductId == ProductId]
+    # ProductId = 'C001'
+    # df = df[df.ProductId == ProductId]
 
     df = df[['QtyNeeded']]
     df_log = np.log(df)
