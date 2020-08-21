@@ -19,51 +19,55 @@ from statsmodels.tsa.stattools import adfuller
 from statsmodels.tsa.seasonal import seasonal_decompose
 from statsmodels.tsa.arima_model import ARIMA
 from pandas.plotting import register_matplotlib_converters
+
 register_matplotlib_converters()
 # test for upload to git
 app = Flask(__name__)
 
 conn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};'
-                            'SERVER=LAPTOP-UDLSS6OC;'
-                            'DATABASE=TestDB;'
-                            'Trusted_Connection=yes;')
+                      'SERVER=DESKTOP-GABJMGH\\MSSQLSERVER01;'
+                      'DATABASE=SSIS_PY;'
+                      'Trusted_Connection=yes;')
 cursor = conn.cursor()
+
 
 @app.route('/<id>/<year>', methods=['GET', 'POST'])
 def barChartPlot(id, year):
+    # connect to sql server and read all of data to dataframe: df
+    df = pd.read_sql_query('SELECT * FROM SSIS_PY.dbo.stationaries', conn)
 
-        # connect to sql server and read all of data to dataframe: df
-        df = pd.read_sql_query('SELECT * FROM TestDB.dbo.stationaries', conn)
+    # create column "year" and "month", convert year: int to string, month: int to month_name
+    df['year'] = pd.DatetimeIndex(df['date']).year
+    df['year'] = df['year'].apply(lambda x: str(x))
+    df['month'] = pd.DatetimeIndex(df['date']).month
+    df['month'] = df['month'].apply(lambda x: calendar.month_name[x])
 
-        # create column "year" and "month", convert year: int to string, month: int to month_name
-        df['year'] = pd.DatetimeIndex(df['date']).year
-        df['year'] = df['year'].apply(lambda x: str(x))
-        df['month'] = pd.DatetimeIndex(df['date']).month
-        df['month'] = df['month'].apply(lambda x: calendar.month_name[x])
+    # filter dataframe using variables id and year
+    df = df[df.item_code == id]
+    df = df[df.year == year]
 
-        # filter dataframe using variables id and year
-        df = df[df.item_code == id]
-        df = df[df.year == year]
+    # create pivot table based on filtered dataframe (specific itemcode and year)
+    table = pd.pivot_table(df, values='quantity', index=['item_code'],
+                           columns=['month'], aggfunc=np.sum, fill_value=0)
+    # plot the bar chart and save figure
+    table.plot(kind='bar')
+    figfile = BytesIO()
+    plt.savefig(figfile, format='png')
+    # encode the bar chart figure
+    html_graph = base64.b64encode(figfile.getvalue())
+    return html_graph.decode('utf8')
+    # return render_template('bar.html', result1=html_graph.decode('utf8'))
 
-        # create pivot table based on filtered dataframe (specific itemcode and year)
-        table = pd.pivot_table(df, values='quantity', index=['item_code'],
-                               columns=['month'], aggfunc=np.sum, fill_value=0)
-        # plot the bar chart and save figure
-        table.plot(kind='bar')
-        figfile = BytesIO()
-        plt.savefig(figfile, format='png')
-        # encode the bar chart figure
-        html_graph = base64.b64encode(figfile.getvalue())
-        return html_graph.decode('utf8')
-        # return render_template('bar.html', result1=html_graph.decode('utf8'))
 
 import json
-@app.route('/itemcode/<itemcode>',methods=['GET', 'POST'])
-def predict(itemcode):
 
+
+@app.route('/itemcode/<itemcode>', methods=['GET', 'POST'])
+def predict(itemcode):
     return jsonify(arima(itemcode))
     # return html_graph_arima.decode('utf8')
     # return render_template('bar.html', result=html_graph_arima.decode('utf8'))
+
 
 # @app.route('/results',methods=['POST'])
 # def results():
@@ -77,12 +81,12 @@ def predict(itemcode):
 
 def arima(itemcode):
     conn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};'
-                          'SERVER=LAPTOP-UDLSS6OC;'
-                          'DATABASE=TestDB;'
+                          'SERVER=DESKTOP-GABJMGH\\MSSQLSERVER01;'
+                          'DATABASE=SSIS_PY;'
                           'Trusted_Connection=yes;')
     cursor = conn.cursor()
     # connect to sql server and read all of data to dataframe: df
-    df = pd.read_sql_query('SELECT * FROM TestDB.dbo.stationaries_ML', conn, parse_dates=['date'], index_col=['date'])
+    df = pd.read_sql_query('SELECT * FROM SSIS_PY.dbo.stationaries', conn, parse_dates=['date'], index_col=['date'])
     # if itemcode != None:
     #     df = df[df.item_code == itemcode]
 
@@ -164,6 +168,7 @@ def arima(itemcode):
     forecast_arr_json = pd.Series(forecast_arr).to_json(orient="values")
     data_set = {"forecast": forecast_arr_json, "img": img_json}
     return data_set
+
 
 if __name__ == "__main__":
     app.run(debug=True)
