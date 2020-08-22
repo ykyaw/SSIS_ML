@@ -26,45 +26,48 @@ app = Flask(__name__)
 
 conn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};'
                       'SERVER=DESKTOP-GABJMGH\\MSSQLSERVER01;'
-                      'DATABASE=SSIS_PY;'
+                      'DATABASE=SSIS;'
                       'Trusted_Connection=yes;')
 cursor = conn.cursor()
 
 
-@app.route('/<id>/<year>', methods=['GET', 'POST'])
-def barChartPlot(id, year):
-    # connect to sql server and read all of data to dataframe: df
-    df = pd.read_sql_query('SELECT * FROM SSIS_PY.dbo.stationaries', conn)
 
-    # create column "year" and "month", convert year: int to string, month: int to month_name
-    df['year'] = pd.DatetimeIndex(df['date']).year
-    df['year'] = df['year'].apply(lambda x: str(x))
-    df['month'] = pd.DatetimeIndex(df['date']).month
-    df['month'] = df['month'].apply(lambda x: calendar.month_name[x])
+@app.route('/<ProductId>/<year>', methods=['GET', 'POST'])
+def barChartPlot(ProductId, year):
 
-    # filter dataframe using variables id and year
-    df = df[df.item_code == id]
-    df = df[df.year == year]
+        # connect to sql server and read all of data to dataframe: df
+        # df = pd.read_sql_query('SELECT * FROM TestDB.dbo.t', conn)
+        df = pd.read_sql_query('SELECT t1.Id, t1.DepartmentId, t1.CreatedDate, t2.ProductId, t2.QtyNeeded FROM [SSIS].[dbo].[Requisitions] AS t1 LEFT JOIN [SSIS].[dbo].[RequisitionDetails] AS t2 ON t1.Id = t2.RequisitionId',conn)
+        df['CreatedDate'] = np.array(df['CreatedDate']).astype('datetime64[ms]')
+        print()
+        # create column "year" and "month", convert year: int to string, month: int to month_name
+        df['year'] = pd.DatetimeIndex(df['CreatedDate']).year
+        df['year'] = df['year'].apply(lambda x: str(x))
+        df['month'] = pd.DatetimeIndex(df['CreatedDate']).month
+        df['month'] = df['month'].apply(lambda x: calendar.month_name[x])
 
-    # create pivot table based on filtered dataframe (specific itemcode and year)
-    table = pd.pivot_table(df, values='quantity', index=['item_code'],
-                           columns=['month'], aggfunc=np.sum, fill_value=0)
-    # plot the bar chart and save figure
-    table.plot(kind='bar')
-    figfile = BytesIO()
-    plt.savefig(figfile, format='png')
-    # encode the bar chart figure
-    html_graph = base64.b64encode(figfile.getvalue())
-    return html_graph.decode('utf8')
-    # return render_template('bar.html', result1=html_graph.decode('utf8'))
+        # filter dataframe using variables id and year
+        df = df[df.ProductId == ProductId]
+        df = df[df.year == year]
 
+        # create pivot table based on filtered dataframe (specific itemcode and year)
+        table = pd.pivot_table(df, values='QtyNeeded', index=['ProductId'],
+                               columns=['month'], aggfunc=np.sum, fill_value=0)
+        # plot the bar chart and save figure
+        table.plot(kind='bar')
+        plt.show()
+        figfile = BytesIO()
+        plt.savefig(figfile, format='png')
+        # encode the bar chart figure
+        html_graph = base64.b64encode(figfile.getvalue())
+        return html_graph.decode('utf8')
+        # return render_template('bar.html', result1=html_graph.decode('utf8'))
 
 import json
+@app.route('/ProductId/<ProductId>', methods=['GET', 'POST'])
+def predict(ProductId):
 
-
-@app.route('/itemcode/<itemcode>', methods=['GET', 'POST'])
-def predict(itemcode):
-    return jsonify(arima(itemcode))
+    return jsonify(arima(ProductId))
     # return html_graph_arima.decode('utf8')
     # return render_template('bar.html', result=html_graph_arima.decode('utf8'))
 
@@ -79,26 +82,33 @@ def predict(itemcode):
 #     return jsonify(output)
 
 
-def arima(itemcode):
+def arima(ProductId):
     conn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};'
                           'SERVER=DESKTOP-GABJMGH\\MSSQLSERVER01;'
                           'DATABASE=SSIS_PY;'
                           'Trusted_Connection=yes;')
     cursor = conn.cursor()
     # connect to sql server and read all of data to dataframe: df
-    df = pd.read_sql_query('SELECT * FROM SSIS_PY.dbo.stationaries', conn, parse_dates=['date'], index_col=['date'])
-    # if itemcode != None:
-    #     df = df[df.item_code == itemcode]
+    # df = pd.read_sql_query('SELECT t1.CreatedDate, t2.ProductId, t2.QtyNeeded FROM [SSIS].[dbo].[Requisitions] AS t1 LEFT JOIN [SSIS].[dbo].[RequisitionDetails] AS t2 ON t1.Id = t2.RequisitionId', conn, parse_dates=['CreatedDate'], index_col=['CreatedDate'])
+    df = pd.read_sql_query('SELECT t1.CreatedDate, t2.ProductId, t2.QtyNeeded FROM [SSIS].[dbo].[Requisitions] AS t1 LEFT JOIN [SSIS].[dbo].[RequisitionDetails] AS t2 ON t1.Id = t2.RequisitionId', conn)
+    df.fillna(0, inplace=True)
+    df['CreatedDate'] = np.array(df['CreatedDate']).astype('datetime64[ms]')
+    df.index = df['CreatedDate']
+    df = df[['ProductId', 'QtyNeeded']]
+    print()
+    # Filter user selected productId
+    if ProductId != 0:
+        df = df[df.ProductId == ProductId]
+    # For example
+    # ProductId = 'C001'
+    # df = df[df.ProductId == ProductId]
 
-    # itemcode = '1'
-    # df = df[df.item_code == itemcode]
-
-    df = df[['quantity']]
+    df = df[['QtyNeeded']]
     df_log = np.log(df)
 
     def get_stationarity(timeseries):
         # Dickey–Fuller test:
-        result = adfuller(timeseries['quantity'])
+        result = adfuller(timeseries['QtyNeeded'])
         print('ADF Statistic: {}'.format(result[0]))
         print('p-value: {}'.format(result[1]))
         print('Critical Values:')
@@ -117,7 +127,7 @@ def arima(itemcode):
 
     predictions_ARIMA_diff = pd.Series(results.fittedvalues, copy=True)
     predictions_ARIMA_diff_cumsum = predictions_ARIMA_diff.cumsum()
-    predictions_ARIMA_log = pd.Series(df_log['quantity'].iloc[0], index=df_log.index)
+    predictions_ARIMA_log = pd.Series(df_log['QtyNeeded'].iloc[0], index=df_log.index)
     predictions_ARIMA_log = predictions_ARIMA_log.add(predictions_ARIMA_diff_cumsum, fill_value=0)
     # predictions_ARIMA = np.exp(predictions_ARIMA_log)
 
