@@ -1,3 +1,4 @@
+from flask_cors import CORS, cross_origin
 import base64
 from io import BytesIO
 import numpy as np
@@ -23,16 +24,29 @@ register_matplotlib_converters()
 # test for upload to git
 app = Flask(__name__)
 
+cors = CORS(app)
+app.config['CORS_HEADERS'] = 'Content-Type'
+
 conn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};'
                             'SERVER=LAPTOP-UDLSS6OC;'
                             'DATABASE=TestDB;'
                             'Trusted_Connection=yes;')
 cursor = conn.cursor()
 
-
+# @app.route("/")
+# def helloWorld():
+#   return "Hello, cross-origin-world!"
+#
+# cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
+#
+@app.route("/cors")
+@cross_origin()
+def list_users():
+  return "cors message success"
 
 
 @app.route('/<ProductId>/<year>', methods=['GET', 'POST'])
+@cross_origin()
 def barChartPlot(ProductId, year):
 
         # connect to sql server and read all of data to dataframe: df
@@ -63,8 +77,8 @@ def barChartPlot(ProductId, year):
         return html_graph.decode('utf8')
         # return render_template('bar.html', result1=html_graph.decode('utf8'))
 
-import json
 @app.route('/ProductId/<ProductId>', methods=['GET', 'POST'])
+@cross_origin()
 def predict(ProductId):
 
     return jsonify(arima(ProductId))
