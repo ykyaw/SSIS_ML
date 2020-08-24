@@ -29,7 +29,7 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 
 conn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};'
                             'SERVER=LAPTOP-UDLSS6OC;'
-                            'DATABASE=TestDB;'
+                            'DATABASE=SSIS;'
                             'Trusted_Connection=yes;')
 cursor = conn.cursor()
 
@@ -69,7 +69,7 @@ def barChartPlot(ProductId, year):
                                columns=['month'], aggfunc=np.sum, fill_value=0)
         # plot the bar chart and save figure
         table.plot(kind='bar')
-        plt.show()
+        # plt.show()
         figfile = BytesIO()
         plt.savefig(figfile, format='png')
         # encode the bar chart figure
@@ -98,7 +98,7 @@ def predict(ProductId):
 def arima(ProductId):
     conn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};'
                           'SERVER=LAPTOP-UDLSS6OC;'
-                          'DATABASE=TestDB;'
+                          'DATABASE=SSIS;'
                           'Trusted_Connection=yes;')
     cursor = conn.cursor()
     # connect to sql server and read all of data to dataframe: df
@@ -135,7 +135,7 @@ def arima(ProductId):
     df_log.dropna(inplace=True)
 
     # decomposition = seasonal_decompose(df_log, freq=36)
-    regressor = ARIMA(df_log, order=(3, 0, 1))
+    regressor = ARIMA(df_log, order=(6, 0, 1))
     results = regressor.fit(disp=-1)
 
     predictions_ARIMA_diff = pd.Series(results.fittedvalues, copy=True)
@@ -145,7 +145,7 @@ def arima(ProductId):
     # predictions_ARIMA = np.exp(predictions_ARIMA_log)
 
     # ML forcaste line chart plot
-    results.plot_predict(1, 144)
+    results.plot_predict(1, 108)
 
     #
     def difference(dataset, interval=1):
@@ -161,12 +161,12 @@ def arima(ProductId):
 
     X = df.values
     # To be adjust in the future
-    cycle = 36
+    cycle = 12
     differenced = difference(X, cycle)
     # fit model
-    model = ARIMA(differenced, order=(7, 0, 1))
+    model = ARIMA(differenced, order=(12, 0, 1))
     model_fit = model.fit(disp=0)
-    # one-step out-of sample forecast
+    # mult-step out-of sample forecast
     forecast = model_fit.forecast(steps=12)[0]
     # invert the differenced forecast to something usable
     history = [x for x in X]
@@ -175,9 +175,12 @@ def arima(ProductId):
     for yhat in forecast:
         inverted = inverse_difference(history, yhat, cycle)
         # print('Day %d: %f' % (day, inverted))
-        forecast_arr.append(inverted)
+        history.append(inverted)
         day += 1
-    forecast_arr = np.concatenate(forecast_arr)
+
+    forecast_arr = np.concatenate(history)
+    forecast_arr = forecast_arr[-12:]
+    forecast_arr = np.rint(forecast_arr)
     fig_arima = BytesIO()
     # Assign plt to fig_arima variable
     plt.savefig(fig_arima, format='png')
