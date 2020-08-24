@@ -69,11 +69,12 @@ def barChartPlot(ProductId, year):
                                columns=['month'], aggfunc=np.sum, fill_value=0)
         # plot the bar chart and save figure
         table.plot(kind='bar')
-        plt.show()
+        # plt.show()
         figfile = BytesIO()
         plt.savefig(figfile, format='png')
         # encode the bar chart figure
         html_graph = base64.b64encode(figfile.getvalue())
+        print(html_graph.decode('utf8'))
         return html_graph.decode('utf8')
         # return render_template('bar.html', result1=html_graph.decode('utf8'))
 
@@ -99,7 +100,7 @@ def predict(ProductId):
 def arima(ProductId):
     conn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};'
                           'SERVER=DESKTOP-GABJMGH\\MSSQLSERVER01;'
-                          'DATABASE=SSIS_PY;'
+                          'DATABASE=SSIS;'
                           'Trusted_Connection=yes;')
     cursor = conn.cursor()
     # connect to sql server and read all of data to dataframe: df
