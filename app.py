@@ -20,6 +20,7 @@ from statsmodels.tsa.stattools import adfuller
 from statsmodels.tsa.seasonal import seasonal_decompose
 from statsmodels.tsa.arima_model import ARIMA
 from pandas.plotting import register_matplotlib_converters
+
 register_matplotlib_converters()
 # test for upload to git
 app = Flask(__name__)
@@ -28,9 +29,11 @@ cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
 
 conn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};'
+
                             'SERVER=LAPTOP-UDLSS6OC;'
                             'DATABASE=SSIS;'
                             'Trusted_Connection=yes;')
+
 cursor = conn.cursor()
 
 # @app.route("/")
@@ -43,7 +46,6 @@ cursor = conn.cursor()
 @cross_origin()
 def list_users():
   return "cors message success"
-
 
 @app.route('/<ProductId>/<year>', methods=['GET', 'POST'])
 @cross_origin()
@@ -74,6 +76,7 @@ def barChartPlot(ProductId, year):
         plt.savefig(figfile, format='png')
         # encode the bar chart figure
         html_graph = base64.b64encode(figfile.getvalue())
+        print(html_graph.decode('utf8'))
         return html_graph.decode('utf8')
         # return render_template('bar.html', result1=html_graph.decode('utf8'))
 
@@ -84,6 +87,7 @@ def predict(ProductId):
     return jsonify(arima(ProductId))
     # return html_graph_arima.decode('utf8')
     # return render_template('bar.html', result=html_graph_arima.decode('utf8'))
+
 
 # @app.route('/results',methods=['POST'])
 # def results():
@@ -97,7 +101,9 @@ def predict(ProductId):
 
 def arima(ProductId):
     conn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};'
+
                           'SERVER=LAPTOP-UDLSS6OC;'
+
                           'DATABASE=SSIS;'
                           'Trusted_Connection=yes;')
     cursor = conn.cursor()
@@ -194,6 +200,7 @@ def arima(ProductId):
     forecast_arr_json = pd.Series(forecast_arr).to_json(orient="values")
     data_set = {"forecast": forecast_arr_json, "img": img_json}
     return data_set
+
 
 if __name__ == "__main__":
     app.run(debug=True)
