@@ -70,7 +70,15 @@ def barChartPlot(ProductId, year):
         table = pd.pivot_table(df, values='QtyNeeded', index=['ProductId'],
                                columns=['month'], aggfunc=np.sum, fill_value=0)
         # plot the bar chart and save figure
-        table.plot(kind='bar')
+        column_order = ['February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October',
+                        'November', 'December']
+        table2 = table.reindex(column_order, axis=1)
+        table2.plot(kind='bar')
+        plt.xlabel("Month")
+        plt.ylabel("Quantity")
+        plt.title("Bar plot of Monthly Product Requisition")
+
+
         # plt.show()
         figfile = BytesIO()
         plt.savefig(figfile, format='png')
@@ -189,7 +197,10 @@ def arima(ProductId):
     forecast_arr = np.rint(forecast_arr)
     fig_arima = BytesIO()
     # Assign plt to fig_arima variable
+    plt.ylabel("Quantity in Log Scale")
+    plt.xlabel("Time period")
     plt.savefig(fig_arima, format='png')
+
     fig_arima.seek(0)
     img = base64.b64encode(fig_arima.getvalue())
     # The JSON format only supports unicode strings.
