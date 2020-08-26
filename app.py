@@ -30,7 +30,7 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 
 conn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};'
 
-                            'SERVER=LAPTOP-UDLSS6OC;'
+                            'SERVER=DESKTOP-FNNAE5H;'
                             'DATABASE=SSIS;'
                             'Trusted_Connection=yes;')
 
@@ -110,7 +110,7 @@ def predict(ProductId):
 def arima(ProductId):
     conn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};'
 
-                          'SERVER=LAPTOP-UDLSS6OC;'
+                          'SERVER=DESKTOP-FNNAE5H;'
 
                           'DATABASE=SSIS;'
                           'Trusted_Connection=yes;')
