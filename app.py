@@ -1,16 +1,8 @@
 from flask_cors import CORS, cross_origin
-import base64
-from io import BytesIO
-import numpy as np
-from flask import Flask, request, jsonify, render_template
-import pickle
-import pandas as pd
-import pyodbc
-import matplotlib.pyplot as plt
+from flask import Flask, jsonify
 import calendar
 
 import pyodbc
-import pickle
 import base64
 from io import BytesIO
 import numpy as np
@@ -36,12 +28,6 @@ conn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};'
 
 cursor = conn.cursor()
 
-# @app.route("/")
-# def helloWorld():
-#   return "Hello, cross-origin-world!"
-#
-# cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
-#
 @app.route("/cors")
 @cross_origin()
 def list_users():
@@ -52,7 +38,6 @@ def list_users():
 def barChartPlot(ProductId, year):
 
         # connect to sql server and read all of data to dataframe: df
-        # df = pd.read_sql_query('SELECT * FROM TestDB.dbo.t', conn)
         df = pd.read_sql_query('SELECT t1.Id, t1.DepartmentId, t1.CreatedDate, t2.ProductId, t2.QtyNeeded FROM [SSIS].[dbo].[Requisitions] AS t1 LEFT JOIN [SSIS].[dbo].[RequisitionDetails] AS t2 ON t1.Id = t2.RequisitionId',conn)
         df['CreatedDate'] = np.array(df['CreatedDate']).astype('datetime64[ms]')
         print()
@@ -77,8 +62,6 @@ def barChartPlot(ProductId, year):
         plt.xlabel("Month")
         plt.ylabel("Quantity")
         plt.title("Bar plot of Monthly Product Requisition")
-
-
         # plt.show()
         figfile = BytesIO()
         plt.savefig(figfile, format='png')
@@ -93,19 +76,6 @@ def barChartPlot(ProductId, year):
 def predict(ProductId):
 
     return jsonify(arima(ProductId))
-    # return html_graph_arima.decode('utf8')
-    # return render_template('bar.html', result=html_graph_arima.decode('utf8'))
-
-
-# @app.route('/results',methods=['POST'])
-# def results():
-#
-#     data = request.get_json(force=True)
-#     prediction = model.predict([np.array(list(data.values()))])
-#
-#     output = prediction[0]
-#     return jsonify(output)
-
 
 def arima(ProductId):
     conn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};'
@@ -116,7 +86,6 @@ def arima(ProductId):
                           'Trusted_Connection=yes;')
     cursor = conn.cursor()
     # connect to sql server and read all of data to dataframe: df
-    # df = pd.read_sql_query('SELECT t1.CreatedDate, t2.ProductId, t2.QtyNeeded FROM [SSIS].[dbo].[Requisitions] AS t1 LEFT JOIN [SSIS].[dbo].[RequisitionDetails] AS t2 ON t1.Id = t2.RequisitionId', conn, parse_dates=['CreatedDate'], index_col=['CreatedDate'])
     df = pd.read_sql_query('SELECT t1.CreatedDate, t2.ProductId, t2.QtyNeeded FROM [SSIS].[dbo].[Requisitions] AS t1 LEFT JOIN [SSIS].[dbo].[RequisitionDetails] AS t2 ON t1.Id = t2.RequisitionId', conn)
     df.fillna(0, inplace=True)
     df['CreatedDate'] = np.array(df['CreatedDate']).astype('datetime64[ms]')
